@@ -79,7 +79,7 @@ export function SiteHeader() {
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 w-full transition-all duration-500 ease-out-expo px-3 sm:px-6 lg:px-12 pointer-events-none",
+          "fixed top-0 left-0 right-0 z-50 w-full transition-all duration-500 ease-out-expo px-3 sm:px-6 lg:px-12 pointer-events-none",
           scrolled ? "py-1.5 sm:py-2.5" : "py-2.5 sm:py-4 lg:py-5"
         )}
       >

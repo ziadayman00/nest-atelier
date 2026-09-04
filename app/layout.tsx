@@ -53,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <WishlistProvider>
               <NotificationsProvider>
                 <SiteHeader />
-                <main className="flex-1">{children}</main>
+                <main className="flex-1 pt-20 sm:pt-24 lg:pt-28">{children}</main>
                 <SiteFooter />
               </NotificationsProvider>
             </WishlistProvider>
