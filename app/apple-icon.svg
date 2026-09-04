@@ -1,0 +1,9 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="44" fill="#161716"/>
+  <!-- NEST Three-Arc Atelier Icon Mark for Apple Touch Icon -->
+  <g transform="translate(15, 41)">
+    <path d="M 11.25 82.5 Q 75 41.25 138.75 82.5" stroke="#FAFAF7" stroke-width="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 30 56.25 Q 75 20.625 120 56.25" stroke="#FAFAF7" stroke-width="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 52.5 31.875 Q 75 7.5 97.5 31.875" stroke="#FAFAF7" stroke-width="9.75" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
