@@ -65,6 +65,8 @@ export interface Product {
   images?: ProductImage[];
   variants?: ProductVariant[];
   createdAt?: string;
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
 export interface ProductQuery {

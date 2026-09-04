@@ -120,6 +120,43 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         </div>
 
+        {/* ── RATING ROW ── */}
+        {product.averageRating != null && (
+          <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-[2px]" aria-label={`${product.averageRating} out of 5 stars`}>
+              {[1, 2, 3, 4, 5].map((star) => {
+                const filled = product.averageRating! >= star;
+                const half = !filled && product.averageRating! >= star - 0.5;
+                return (
+                  <svg key={star} viewBox="0 0 12 12" className="h-3 w-3 shrink-0" fill="none">
+                    {half ? (
+                      <>
+                        <defs>
+                          <linearGradient id={`hg-${product.id}-${star}`} x1="0" x2="1" y1="0" y2="0">
+                            <stop offset="50%" stopColor="#B86A44" />
+                            <stop offset="50%" stopColor="transparent" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M6 1l1.39 2.82L10.5 4.27l-2.25 2.19.53 3.09L6 8.08 3.22 9.55l.53-3.09L1.5 4.27l3.11-.45L6 1z" fill={`url(#hg-${product.id}-${star})`} stroke="#B86A44" strokeWidth="0.8" />
+                      </>
+                    ) : (
+                      <path d="M6 1l1.39 2.82L10.5 4.27l-2.25 2.19.53 3.09L6 8.08 3.22 9.55l.53-3.09L1.5 4.27l3.11-.45L6 1z" fill={filled ? "#B86A44" : "none"} stroke={filled ? "#B86A44" : "#C8BFB4"} strokeWidth="0.8" />
+                    )}
+                  </svg>
+                );
+              })}
+            </div>
+            <span className="text-[10px] font-mono text-[#6B7068]">
+              {product.averageRating.toFixed(1)}
+            </span>
+            {!!product.reviewCount && (
+              <span className="text-[10px] font-mono text-[#6B7068]">
+                ({product.reviewCount})
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pt-2 border-t border-[#E2DCD2]/60">
           <span className="text-sm font-semibold text-[#161716]">
             {formatPrice(price)}
