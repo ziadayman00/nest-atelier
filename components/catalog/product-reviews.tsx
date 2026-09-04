@@ -258,6 +258,28 @@ export function ProductReviews({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previews]);
 
+  // Lock body scroll when review modal is open
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showModal]);
+
+  // Close review modal on Escape key
+  useEffect(() => {
+    if (!showModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showModal]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     const remaining = MAX_IMAGES - images.length;
@@ -393,10 +415,15 @@ export function ProductReviews({
 
       {/* ── Write Review Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4 overflow-y-auto">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center glass-backdrop p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleClose();
+          }}
+        >
           <form
             onSubmit={handleSubmitReview}
-            className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-7 sm:p-10 space-y-6 shadow-2xl my-8"
+            className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-7 sm:p-10 space-y-6 shadow-2xl my-8 relative z-10"
           >
             {/* Modal header */}
             <div className="border-b border-[#E2DCD2] pb-5 flex items-start justify-between gap-4">

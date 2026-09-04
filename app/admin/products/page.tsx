@@ -415,8 +415,13 @@ export default function AdminProductsPage() {
 
       {/* Edit Modal */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4">
-          <form onSubmit={saveEdit} className="w-full max-w-md bento-card p-8 space-y-5">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center glass-backdrop p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingProduct(null);
+          }}
+        >
+          <form onSubmit={saveEdit} className="w-full max-w-md bento-card p-8 space-y-5 relative z-10">
             <div className="border-b border-[#E2DCD2] pb-4 flex items-center justify-between">
               <h3 className="font-display text-2xl text-[#161716]">Edit Piece</h3>
               <button type="button" onClick={() => setEditingProduct(null)} className="text-xl text-[#6B7068]">×</button>
@@ -435,8 +440,13 @@ export default function AdminProductsPage() {
 
       {/* Image Modal */}
       {imageModalProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4">
-          <form onSubmit={saveAddImage} className="w-full max-w-md bento-card p-8 space-y-5">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center glass-backdrop p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setImageModalProduct(null);
+          }}
+        >
+          <form onSubmit={saveAddImage} className="w-full max-w-md bento-card p-8 space-y-5 relative z-10">
             <div className="border-b border-[#E2DCD2] pb-4 flex items-center justify-between">
               <h3 className="font-display text-2xl text-[#161716]">Attach Image</h3>
               <button type="button" onClick={() => setImageModalProduct(null)} className="text-xl text-[#6B7068]">×</button>
@@ -463,8 +473,13 @@ export default function AdminProductsPage() {
 
       {/* Variant Modal */}
       {variantModalProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4">
-          <form onSubmit={saveAddVariant} className="w-full max-w-md bento-card p-8 space-y-5">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center glass-backdrop p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setVariantModalProduct(null);
+          }}
+        >
+          <form onSubmit={saveAddVariant} className="w-full max-w-md bento-card p-8 space-y-5 relative z-10">
             <div className="border-b border-[#E2DCD2] pb-4 flex items-center justify-between">
               <h3 className="font-display text-2xl text-[#161716]">Add Finish / Variant</h3>
               <button type="button" onClick={() => setVariantModalProduct(null)} className="text-xl text-[#6B7068]">×</button>
