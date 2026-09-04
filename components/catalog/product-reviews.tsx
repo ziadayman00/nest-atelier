@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { catalogApi } from "@/lib/api/catalog";
 import { useAuth } from "@/providers/auth-provider";
@@ -121,6 +122,12 @@ function ReviewerAvatar({ name }: { name: string }) {
 /* ─── Image lightbox gallery ─── */
 function ReviewImageGallery({ images }: { images: string[] }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (!images || images.length === 0) return null;
   return (
     <>
@@ -136,12 +143,15 @@ function ReviewImageGallery({ images }: { images: string[] }) {
           </button>
         ))}
       </div>
-      {lightbox && (
+      {mounted && lightbox && createPortal(
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-[#161716]/85 backdrop-blur-sm p-4"
           onClick={() => setLightbox(null)}
         >
-          <div className="relative max-w-2xl w-full aspect-square rounded-2xl overflow-hidden shadow-2xl">
+          <div
+            className="relative max-w-2xl w-full aspect-square rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Image src={lightbox} alt="Review photo" fill className="object-contain" />
           </div>
           <button
@@ -151,7 +161,8 @@ function ReviewImageGallery({ images }: { images: string[] }) {
           >
             ×
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -225,6 +236,11 @@ export function ProductReviews({
   const [summary, setSummary] = useState<ReviewSummary>({ count: 0, averageRating: 0 });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Form state
   const [rating, setRating] = useState(5);
@@ -414,137 +430,141 @@ export function ProductReviews({
       )}
 
       {/* ── Write Review Modal ── */}
-      {showModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center glass-backdrop p-4 overflow-y-auto"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClose();
-          }}
-        >
-          <form
-            onSubmit={handleSubmitReview}
-            className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-7 sm:p-10 space-y-6 shadow-2xl my-8 relative z-10"
+      {mounted &&
+        showModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#161716]/65 backdrop-blur-md p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleClose();
+            }}
           >
-            {/* Modal header */}
-            <div className="border-b border-[#E2DCD2] pb-5 flex items-start justify-between gap-4">
-              <div>
-                <span className="pill-accent-sage text-xs font-mono">Verified Purchaser</span>
-                <h3 className="font-display text-3xl text-[#161716] mt-1">Share Your Experience</h3>
+            <form
+              onSubmit={handleSubmitReview}
+              className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-7 sm:p-10 space-y-6 shadow-2xl my-8 relative z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              <div className="border-b border-[#E2DCD2] pb-5 flex items-start justify-between gap-4">
+                <div>
+                  <span className="pill-accent-sage text-xs font-mono">Verified Purchaser</span>
+                  <h3 className="font-display text-3xl text-[#161716] mt-1">Share Your Experience</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="text-2xl text-[#6B7068] hover:text-[#161716] cursor-pointer mt-1 leading-none"
+                >
+                  ×
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="text-2xl text-[#6B7068] hover:text-[#161716] cursor-pointer mt-1 leading-none"
-              >
-                ×
-              </button>
-            </div>
 
-            {/* Star picker */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Your Rating
-              </label>
-              <StarPicker rating={rating} onChange={setRating} />
-            </div>
+              {/* Star picker */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
+                  Your Rating
+                </label>
+                <StarPicker rating={rating} onChange={setRating} />
+              </div>
 
-            {/* Headline */}
-            <Input
-              label="Review Headline"
-              placeholder="e.g. Exceptional craftsmanship and monolithic presence"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-
-            {/* Body */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Detailed Review{" "}
-                <span className="font-normal text-[#6B7068]">(min 20 characters)</span>
-              </label>
-              <textarea
-                rows={4}
-                placeholder="Describe the wood finish, structural joinery, white-glove delivery experience..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="w-full p-4 text-sm text-[#161716] rounded-2xl border border-[#E2DCD2] bg-[#FAFAF7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#4A5E4C] resize-none"
+              {/* Headline */}
+              <Input
+                label="Review Headline"
+                placeholder="e.g. Exceptional craftsmanship and monolithic presence"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 required
               />
-              <div className="flex items-center justify-between">
-                <span className={cn(
-                  "text-[10px] font-mono transition-colors",
-                  bodyOk ? "text-[#4A5E4C]" : "text-[#6B7068]"
-                )}>
-                  {bodyOk ? "✓ Minimum length reached" : `${20 - body.trim().length} more characters needed`}
-                </span>
-                <span className="text-[10px] font-mono text-[#6B7068]">{body.length} chars</span>
-              </div>
-            </div>
 
-            {/* Image upload */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Photos{" "}
-                <span className="font-normal text-[#6B7068]">
-                  (optional · up to {MAX_IMAGES}, 5 MB each)
-                </span>
-              </label>
-              {previews.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {previews.map((src, i) => (
-                    <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DCD2] group">
-                      <Image src={src} alt={`Preview ${i + 1}`} fill className="object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i)}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#161716]/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+              {/* Body */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
+                  Detailed Review{" "}
+                  <span className="font-normal text-[#6B7068]">(min 20 characters)</span>
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Describe the wood finish, structural joinery, white-glove delivery experience..."
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="w-full p-4 text-sm text-[#161716] rounded-2xl border border-[#E2DCD2] bg-[#FAFAF7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#4A5E4C] resize-none"
+                  required
+                />
+                <div className="flex items-center justify-between">
+                  <span className={cn(
+                    "text-[10px] font-mono transition-colors",
+                    bodyOk ? "text-[#4A5E4C]" : "text-[#6B7068]"
+                  )}>
+                    {bodyOk ? "✓ Minimum length reached" : `${20 - body.trim().length} more characters needed`}
+                  </span>
+                  <span className="text-[10px] font-mono text-[#6B7068]">{body.length} chars</span>
                 </div>
-              )}
-              {images.length < MAX_IMAGES && (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-dashed border-[#B0A898] text-xs text-[#6B7068] hover:border-[#4A5E4C] hover:text-[#4A5E4C] transition-colors cursor-pointer w-full justify-center"
-                  >
-                    <span className="text-lg leading-none">+</span>
-                    Add Photos ({images.length}/{MAX_IMAGES})
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
 
-            {formError && (
-              <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-xl px-4 py-2.5">
-                {formError}
-              </p>
-            )}
+              {/* Image upload */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
+                  Photos{" "}
+                  <span className="font-normal text-[#6B7068]">
+                    (optional · up to {MAX_IMAGES}, 5 MB each)
+                  </span>
+                </label>
+                {previews.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    {previews.map((src, i) => (
+                      <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#E2DCD2] group">
+                        <Image src={src} alt={`Preview ${i + 1}`} fill className="object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(i)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#161716]/80 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {images.length < MAX_IMAGES && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-dashed border-[#B0A898] text-xs text-[#6B7068] hover:border-[#4A5E4C] hover:text-[#4A5E4C] transition-colors cursor-pointer w-full justify-center"
+                    >
+                      <span className="text-lg leading-none">+</span>
+                      Add Photos ({images.length}/{MAX_IMAGES})
+                    </button>
+                  </>
+                )}
+              </div>
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-[#E2DCD2]">
-              <Button type="button" variant="ghost" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={submitting}>
-                Submit Review ↗
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
+              {formError && (
+                <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-xl px-4 py-2.5">
+                  {formError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-[#E2DCD2]">
+                <Button type="button" variant="ghost" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" loading={submitting}>
+                  Submit Review ↗
+                </Button>
+              </div>
+            </form>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
