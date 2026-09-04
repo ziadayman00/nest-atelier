@@ -11,27 +11,117 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils/format";
 import type { Review, ReviewSummary } from "@/lib/types/catalog";
 import { ApiError } from "@/lib/api/client";
+import { cn } from "@/lib/utils/cn";
 
 const MAX_IMAGES = 3;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-function StarRatingBar({ rating }: { rating: number }) {
+/* ─── SVG star row (consistent with product card stars) ─── */
+function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) {
+  const dim = size === "lg" ? "h-4 w-4" : "h-3.5 w-3.5";
   return (
-    <span className="text-xs text-amber-500 font-mono tracking-widest">
-      {Array.from({ length: 5 }, (_, i) => (
-        <span key={i} className={i < rating ? "text-amber-500" : "text-[#E2DCD2]"}>
-          ★
-        </span>
-      ))}
-    </span>
+    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const filled = rating >= star;
+        const half = !filled && rating >= star - 0.5;
+        return (
+          <svg key={star} viewBox="0 0 12 12" className={cn(dim, "shrink-0")} fill="none">
+            {half ? (
+              <>
+                <defs>
+                  <linearGradient id={`hg-rev-${star}`} x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="50%" stopColor="#B86A44" />
+                    <stop offset="50%" stopColor="transparent" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M6 1l1.39 2.82L10.5 4.27l-2.25 2.19.53 3.09L6 8.08 3.22 9.55l.53-3.09L1.5 4.27l3.11-.45L6 1z"
+                  fill={`url(#hg-rev-${star})`}
+                  stroke="#B86A44"
+                  strokeWidth="0.8"
+                />
+              </>
+            ) : (
+              <path
+                d="M6 1l1.39 2.82L10.5 4.27l-2.25 2.19.53 3.09L6 8.08 3.22 9.55l.53-3.09L1.5 4.27l3.11-.45L6 1z"
+                fill={filled ? "#B86A44" : "none"}
+                stroke={filled ? "#B86A44" : "#C8BFB4"}
+                strokeWidth="0.8"
+              />
+            )}
+          </svg>
+        );
+      })}
+    </div>
   );
 }
 
+/* ─── Interactive star picker for the modal ─── */
+function StarPicker({ rating, onChange }: { rating: number; onChange: (r: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const labels = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
+  return (
+    <div className="flex items-center gap-2">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onMouseEnter={() => setHover(star)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(star)}
+          className="cursor-pointer transition-transform hover:scale-110"
+          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+        >
+          <svg viewBox="0 0 20 20" className="h-7 w-7" fill="none">
+            <path
+              d="M10 2l2.09 4.26L17 7.27l-3.5 3.41.83 4.82L10 13.27l-4.33 2.23.83-4.82L3 7.27l4.91-.71L10 2z"
+              fill={star <= (hover || rating) ? "#B86A44" : "none"}
+              stroke={star <= (hover || rating) ? "#B86A44" : "#C8BFB4"}
+              strokeWidth="1.2"
+            />
+          </svg>
+        </button>
+      ))}
+      <span className="text-sm font-mono text-[#6B7068]">
+        {labels[hover || rating]}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Reviewer avatar with deterministic initials + color ─── */
+function ReviewerAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const palettes = [
+    "bg-[#4A5E4C] text-[#FAFAF7]",
+    "bg-[#B86A44] text-[#FAFAF7]",
+    "bg-[#6B7068] text-[#FAFAF7]",
+    "bg-[#161716] text-[#FAFAF7]",
+    "bg-[#8B7355] text-[#FAFAF7]",
+  ];
+  const colorClass = palettes[(name.charCodeAt(0) ?? 0) % palettes.length];
+  return (
+    <div
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold font-mono select-none",
+        colorClass
+      )}
+      aria-hidden
+    >
+      {initials || "?"}
+    </div>
+  );
+}
+
+/* ─── Image lightbox gallery ─── */
 function ReviewImageGallery({ images }: { images: string[] }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
-
   if (!images || images.length === 0) return null;
-
   return (
     <>
       <div className="flex gap-2 mt-3 flex-wrap">
@@ -46,7 +136,6 @@ function ReviewImageGallery({ images }: { images: string[] }) {
           </button>
         ))}
       </div>
-
       {lightbox && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-[#161716]/85 backdrop-blur-sm p-4"
@@ -68,6 +157,60 @@ function ReviewImageGallery({ images }: { images: string[] }) {
   );
 }
 
+/* ─── Individual review card ─── */
+function ReviewCard({ rev }: { rev: Review }) {
+  const reviewerName = rev.reviewer?.fullName ?? rev.user?.fullName ?? "Verified Buyer";
+  const reviewImages = rev.images ?? [];
+  return (
+    <div className="rounded-2xl border border-[#E2DCD2]/70 bg-white/55 backdrop-blur-sm p-5 sm:p-6 space-y-3">
+      {/* Reviewer header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <ReviewerAvatar name={reviewerName} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#161716] truncate leading-tight">
+              {reviewerName}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <StarRow rating={rev.rating} />
+              <span className="text-[10px] font-mono font-medium text-[#B86A44]">
+                {rev.rating}.0
+              </span>
+            </div>
+          </div>
+        </div>
+        <span className="text-[11px] text-[#6B7068] font-mono shrink-0 pt-0.5">
+          {formatDate(rev.createdAt)}
+        </span>
+      </div>
+
+      {/* Review headline */}
+      {rev.title && (
+        <h4 className="font-display text-lg text-[#161716] font-medium leading-snug">
+          &ldquo;{rev.title}&rdquo;
+        </h4>
+      )}
+
+      {/* Review body */}
+      <p className="text-sm text-[#4A4A42] leading-relaxed">{rev.body}</p>
+
+      {/* Photos */}
+      {reviewImages.length > 0 && <ReviewImageGallery images={reviewImages} />}
+
+      {/* Verified badge */}
+      <div className="pt-1">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#EDE7DC] px-2.5 py-0.5 text-[10px] font-mono font-medium text-[#4A5E4C]">
+          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor">
+            <path d="M8 0l1.76 5.41H15l-4.58 3.32 1.76 5.41L8 10.82l-4.18 3.32 1.76-5.41L1 5.41h5.24z" />
+          </svg>
+          Verified Purchase
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main export ─── */
 export function ProductReviews({
   productId,
   productSlug,
@@ -85,7 +228,6 @@ export function ProductReviews({
 
   // Form state
   const [rating, setRating] = useState(5);
-  const [hoverRating, setHoverRating] = useState(0);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [images, setImages] = useState<File[]>([]);
@@ -108,13 +250,12 @@ export function ProductReviews({
 
   useEffect(() => {
     loadReviews();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productSlug]);
 
-  // Cleanup object URLs on unmount
   useEffect(() => {
     return () => previews.forEach((p) => URL.revokeObjectURL(p));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previews]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +263,6 @@ export function ProductReviews({
     const remaining = MAX_IMAGES - images.length;
     const accepted: File[] = [];
     const newPreviews: string[] = [];
-
     for (const file of files.slice(0, remaining)) {
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
         toastError(`${file.name} is not a supported format (JPEG, PNG, WebP).`);
@@ -135,10 +275,8 @@ export function ProductReviews({
       accepted.push(file);
       newPreviews.push(URL.createObjectURL(file));
     }
-
     setImages((prev) => [...prev, ...accepted]);
     setPreviews((prev) => [...prev, ...newPreviews]);
-    // Reset input so same file can be re-selected after removal
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -150,7 +288,6 @@ export function ProductReviews({
 
   const resetForm = () => {
     setRating(5);
-    setHoverRating(0);
     setTitle("");
     setBody("");
     previews.forEach((p) => URL.revokeObjectURL(p));
@@ -167,12 +304,10 @@ export function ProductReviews({
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-
     if (body.trim().length < 20) {
       setFormError("Review body must contain at least 20 characters.");
       return;
     }
-
     setSubmitting(true);
     try {
       await catalogApi.createReview(productId, { rating, title, body, images });
@@ -188,113 +323,105 @@ export function ProductReviews({
     }
   };
 
+  const bodyOk = body.trim().length >= 20;
+
   return (
-    <div className="glass-card p-8 sm:p-12 space-y-8">
-      {/* Header */}
+    <div className="glass-card p-6 sm:p-10 space-y-8">
+      {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2DCD2] pb-6">
         <div className="space-y-1">
           <span className="pill-accent-sage text-xs font-mono">Client Impressions</span>
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <h2 className="font-display text-3xl sm:text-4xl text-[#161716]">
-              Verified Residence Reviews
+              Residence Reviews
             </h2>
-            <div className="flex items-center gap-1.5 rounded-full bg-[#EDE7DC] px-3.5 py-1 text-xs font-semibold text-[#161716] font-mono">
-              <span className="text-amber-600">★</span>
-              <span>{summary.averageRating > 0 ? summary.averageRating.toFixed(1) : "New"}</span>
-              <span className="text-[#6B7068]">({summary.count})</span>
-            </div>
+            {summary.count > 0 && (
+              <div className="flex items-center gap-2 rounded-full bg-[#EDE7DC] px-3.5 py-1.5">
+                <StarRow rating={Math.round(summary.averageRating * 2) / 2} />
+                <span className="text-xs font-semibold font-mono text-[#161716]">
+                  {summary.averageRating.toFixed(1)}
+                </span>
+                <span className="text-xs font-mono text-[#6B7068]">
+                  ({summary.count} {summary.count === 1 ? "review" : "reviews"})
+                </span>
+              </div>
+            )}
           </div>
         </div>
-
         {user && (
-          <Button onClick={() => setShowModal(true)} size="md" className="cursor-pointer">
+          <Button onClick={() => setShowModal(true)} size="md" className="cursor-pointer shrink-0">
             + Write a Review ↗
           </Button>
         )}
       </div>
 
-      {/* Review List */}
+      {/* ── List ── */}
       {loading ? (
         <div className="py-12 flex justify-center">
           <Spinner className="h-6 w-6 text-[#4A5E4C]" />
         </div>
       ) : reviews.length > 0 ? (
-        <div className="divide-y divide-[#E2DCD2]">
-          {reviews.map((rev) => {
-            const reviewerName = rev.reviewer?.fullName ?? rev.user?.fullName ?? "Verified Buyer";
-            const reviewImages = rev.images ?? [];
-            return (
-              <div key={rev.id} className="py-6 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="font-display text-xl text-[#161716] font-medium">{rev.title}</span>
-                    <StarRatingBar rating={rev.rating} />
-                  </div>
-                  <span className="text-[11px] text-[#6B7068] font-mono">{formatDate(rev.createdAt)}</span>
-                </div>
-                <p className="text-xs sm:text-sm text-[#6B7068] font-light leading-relaxed">{rev.body}</p>
-                {reviewImages.length > 0 && <ReviewImageGallery images={reviewImages} />}
-                <p className="text-[11px] font-semibold text-[#4A5E4C] font-mono pt-1">
-                  By {reviewerName} · Verified Hand Delivery
-                </p>
-              </div>
-            );
-          })}
+        <div className="grid gap-4">
+          {reviews.map((rev) => (
+            <ReviewCard key={rev.id} rev={rev} />
+          ))}
         </div>
       ) : (
-        <div className="py-10 text-center space-y-2">
-          <p className="font-display text-2xl text-[#6B7068]">No client reviews registered yet.</p>
-          <p className="text-xs text-[#6B7068] font-light">
+        <div className="py-12 text-center space-y-3">
+          <div className="flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EDE7DC]">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 text-[#B0A898]" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+              </svg>
+            </div>
+          </div>
+          <p className="font-display text-2xl text-[#6B7068]">No reviews yet</p>
+          <p className="text-sm text-[#6B7068] font-light max-w-xs mx-auto">
             Be the first client with a delivered order to share your spatial feedback.
           </p>
+          {user && (
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="mt-2 text-sm font-semibold text-[#4A5E4C] underline underline-offset-4 cursor-pointer hover:text-[#161716] transition-colors"
+            >
+              Write the first review →
+            </button>
+          )}
         </div>
       )}
 
-      {/* Write Review Modal */}
+      {/* ── Write Review Modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center glass-backdrop p-4 overflow-y-auto">
           <form
             onSubmit={handleSubmitReview}
-            className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-8 sm:p-10 space-y-6 shadow-2xl my-8"
+            className="w-full max-w-lg rounded-[28px] ios-glass-dropdown p-7 sm:p-10 space-y-6 shadow-2xl my-8"
           >
-            {/* Modal Header */}
-            <div className="border-b border-[#E2DCD2] pb-4 flex items-center justify-between">
+            {/* Modal header */}
+            <div className="border-b border-[#E2DCD2] pb-5 flex items-start justify-between gap-4">
               <div>
-                <span className="pill-accent-sage text-xs font-mono">Verified Purchaser Feedback</span>
-                <h3 className="font-display text-3xl text-[#161716] mt-1">Share Piece Experience</h3>
+                <span className="pill-accent-sage text-xs font-mono">Verified Purchaser</span>
+                <h3 className="font-display text-3xl text-[#161716] mt-1">Share Your Experience</h3>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="text-2xl text-[#6B7068] hover:text-[#161716] cursor-pointer"
+                className="text-2xl text-[#6B7068] hover:text-[#161716] cursor-pointer mt-1 leading-none"
               >
                 ×
               </button>
             </div>
 
-            {/* Rating Picker */}
-            <div className="space-y-1.5">
+            {/* Star picker */}
+            <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Rating Score
+                Your Rating
               </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    onClick={() => setRating(star)}
-                    className={`text-2xl transition-transform cursor-pointer ${
-                      star <= (hoverRating || rating) ? "text-amber-500 scale-110" : "text-[#E2DCD2]"
-                    }`}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
+              <StarPicker rating={rating} onChange={setRating} />
             </div>
 
+            {/* Headline */}
             <Input
               label="Review Headline"
               placeholder="e.g. Exceptional craftsmanship and monolithic presence"
@@ -303,27 +430,39 @@ export function ProductReviews({
               required
             />
 
+            {/* Body */}
             <div className="space-y-1.5">
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Detailed Review <span className="font-normal text-[#6B7068]">(min 20 characters)</span>
+                Detailed Review{" "}
+                <span className="font-normal text-[#6B7068]">(min 20 characters)</span>
               </label>
               <textarea
                 rows={4}
-                placeholder="Describe wood finish, structural joinery, white-glove delivery experience..."
+                placeholder="Describe the wood finish, structural joinery, white-glove delivery experience..."
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full p-4 text-xs text-[#161716] rounded-2xl border border-[#E2DCD2] bg-[#FAFAF7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#4A5E4C]"
+                className="w-full p-4 text-sm text-[#161716] rounded-2xl border border-[#E2DCD2] bg-[#FAFAF7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#4A5E4C] resize-none"
                 required
               />
-              <p className="text-[10px] text-[#6B7068] text-right font-mono">{body.length} / 20 min chars</p>
+              <div className="flex items-center justify-between">
+                <span className={cn(
+                  "text-[10px] font-mono transition-colors",
+                  bodyOk ? "text-[#4A5E4C]" : "text-[#6B7068]"
+                )}>
+                  {bodyOk ? "✓ Minimum length reached" : `${20 - body.trim().length} more characters needed`}
+                </span>
+                <span className="text-[10px] font-mono text-[#6B7068]">{body.length} chars</span>
+              </div>
             </div>
 
-            {/* Image Upload */}
+            {/* Image upload */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-[#161716] font-mono">
-                Photos <span className="font-normal text-[#6B7068]">(optional · up to {MAX_IMAGES}, 5 MB each)</span>
+                Photos{" "}
+                <span className="font-normal text-[#6B7068]">
+                  (optional · up to {MAX_IMAGES}, 5 MB each)
+                </span>
               </label>
-
               {previews.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {previews.map((src, i) => (
@@ -340,7 +479,6 @@ export function ProductReviews({
                   ))}
                 </div>
               )}
-
               {images.length < MAX_IMAGES && (
                 <>
                   <input
@@ -363,9 +501,13 @@ export function ProductReviews({
               )}
             </div>
 
-            {formError && <p className="text-xs text-red-600 font-semibold">{formError}</p>}
+            {formError && (
+              <p className="text-xs text-red-600 font-semibold bg-red-50 rounded-xl px-4 py-2.5">
+                {formError}
+              </p>
+            )}
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2DCD2]">
+            <div className="flex justify-end gap-3 pt-2 border-t border-[#E2DCD2]">
               <Button type="button" variant="ghost" onClick={handleClose}>
                 Cancel
               </Button>
